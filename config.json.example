@@ -1,0 +1,12 @@
+{
+  "client_id": "<obtain a client id off trakt>",
+  "access_token": "<setup an access token using your app id above>",
+  "username": "<user user name>",
+  "lists": {
+    "30": "half-hour-shows-i-want-to-try",
+    "40": "40-minute-shows-i-want-to-try",
+    "60": "hour-shows-i-want-to-try",
+    "sleepy": "old-adventure-shows",
+    "sitcom": "sitcoms-i-want-to-try"
+  }
+}
