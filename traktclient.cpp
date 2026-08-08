@@ -211,33 +211,24 @@ QVector<Show> TraktClient::fetchPopularShows()
 QVector<Show> TraktClient::fetchListShows(const QString& slug) const
 {
     QVector<Show> result;
+    if (!isValid()) return result;
 
-    if (!isValid())
-        return result;
-
-    QString path = QString("/users/%1/lists/%2/items/shows")
-                       .arg(username_, slug);
-
+    QString path = QString("/users/%1/lists/%2/items/shows").arg(username_, slug);
     QByteArray data = get(path, "extended=show,full,images");
     QJsonDocument doc = QJsonDocument::fromJson(data);
-    if (!doc.isArray())
-        return result;
+    if (!doc.isArray()) return result;
 
     for (const auto& v : doc.array()) {
         if (!v.isObject()) continue;
-
         QJsonObject showObj = v.toObject().value("show").toObject();
         if (showObj.isEmpty()) continue;
 
         Show s = parseShow(showObj);
-        s.runtime = fetchMaxRuntimeForShow(s.traktId);
-        fetchSeasonEpisodeInfo(s);
+        // REMOVED fetchMaxRuntimeForShow and fetchSeasonEpisodeInfo
         result.push_back(s);
     }
-
     return result;
 }
-
 
 
 QVector<Show> TraktClient::fetchTrendingShows()
@@ -266,16 +257,14 @@ void TraktClient::populateShowDetails(Show& s) const
 QVector<Show> TraktClient::fetchRelatedShows(int traktId)
 {
     QVector<Show> result;
-    QByteArray data = get(QString("/shows/%1/related").arg(traktId),
-                          "extended=full,images");
+    QByteArray data = get(QString("/shows/%1/related").arg(traktId), "extended=full,images");
     QJsonDocument doc = QJsonDocument::fromJson(data);
     if (!doc.isArray()) return result;
 
     for (const auto& v : doc.array()) {
         if (!v.isObject()) continue;
         Show s = parseShow(v.toObject());
-        s.runtime = fetchMaxRuntimeForShow(s.traktId);
-        fetchSeasonEpisodeInfo(s);
+        // REMOVED fetchMaxRuntimeForShow and fetchSeasonEpisodeInfo
         result.push_back(s);
     }
     return result;

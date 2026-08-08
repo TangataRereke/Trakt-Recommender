@@ -79,33 +79,26 @@ Show ShowRecommender::fallbackRelated()
     const QMap<QString, QString>& lists = client_->listMap();
 
     for (int attempt = 0; attempt < cycle_.size(); ++attempt) {
-
         QString key = cycle_.at(cycleIndex_);
         cycleIndex_ = (cycleIndex_ + 1) % cycle_.size();
 
-        if (!lists.contains(key))
-            continue;
+        if (!lists.contains(key)) continue;
 
         QString slug = lists.value(key);
-        qDebug() << "Fallback attempt using list key:" << key << "slug:" << slug;
-
-        // Fetch shows in THIS list only
         QVector<Show> listShows = client_->fetchListShows(slug);
-        qDebug() << "List shows fetched:" << listShows.size();
+        if (listShows.isEmpty()) continue;
 
-        if (listShows.isEmpty())
-            continue;
-
-        // Pick a random seed show from this list
         int randomIndex = QRandomGenerator::global()->bounded(listShows.size());
         int seedId = listShows[randomIndex].traktId;
 
         QVector<Show> related = client_->fetchRelatedShows(seedId);
-        qDebug() << "Related shows fetched:" << related.size();
 
-        for (const Show& s : related) {
-            if (isEligible(s))
+        for (Show& s : related) {
+            if (isEligible(s)) {
+                // Populate heavy details ONLY for the selected fallback show!
+                client_->populateShowDetails(s);
                 return s;
+            }
         }
     }
 
