@@ -4,6 +4,7 @@ Add recommendations to your own lists from shows on trakt. It'll filter out show
 
 You can add your own configuration things in as you feel you need to. This is all hard coded for now.
 
+This is currently for Ubuntu 24.04+ / C++
 
 SETUP
 -----

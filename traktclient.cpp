@@ -369,49 +369,73 @@ void TraktClient::fetchSeasonEpisodeInfo(Show& s) const
 QSet<int> TraktClient::fetchAllListShowIds()
 {
     QSet<int> ids;
-    qDebug() << "[DEBUG List Fetch] Starting fetch for total lists:" << lists_.size();
+    qDebug() << "================ LIST FETCH PAGINATION ================";
 
     for (auto it = lists_.begin(); it != lists_.end(); ++it) {
         QString listKey = it.key();
         QString slug = it.value();
-        
-        // FIX 1: Add limit=1000 to bypass Trakt's default 10-item pagination limit!
-        QString path = QString("/users/%1/lists/%2/items").arg(username_, slug);
-        QString query = "extended=show&limit=1000";
 
-        QByteArray data = get(path, query);
-        QJsonDocument doc = QJsonDocument::fromJson(data);
+        int page = 1;
+        int listTotalCount = 0;
 
-        if (!doc.isArray()) {
-            qDebug() << "[DEBUG List Fetch ERROR] List" << slug << "did not return an array";
-            continue;
-        }
+        while (true) {
+            // Trakt API endpoint for list items
+            QString path = QString("/users/%1/lists/%2/items/shows").arg(username_, slug);
+            QString query = QString("extended=full&limit=250&page=%1").arg(page);
 
-        int addedCount = 0;
-        for (const auto& v : doc.array()) {
-            QJsonObject item = v.toObject();
-            QString itemType = item.value("type").toString();
+            QByteArray data = get(path, query);
+            QJsonDocument doc = QJsonDocument::fromJson(data);
 
-            // Extract show object directly or fall back to top-level if needed
-            QJsonObject showObj;
-            if (itemType == "show") {
-                showObj = item.value("show").toObject();
-            } else if (item.contains("show")) {
-                showObj = item.value("show").toObject();
+            // Fallback to general items if items/shows is empty/invalid
+            if (!doc.isArray() || doc.array().isEmpty()) {
+                path = QString("/users/%1/lists/%2/items").arg(username_, slug);
+                data = get(path, query);
+                doc = QJsonDocument::fromJson(data);
             }
 
-            if (!showObj.isEmpty()) {
-                int id = showObj.value("ids").toObject().value("trakt").toInt();
-                if (id > 0) {
-                    ids.insert(id);
-                    addedCount++;
+            if (!doc.isArray() || doc.array().isEmpty()) {
+                // Reached the end of pages for this list
+                break;
+            }
+
+            QJsonArray arr = doc.array();
+            int pageAdded = 0;
+
+            for (const auto& v : arr) {
+                QJsonObject item = v.toObject();
+                QJsonObject showObj;
+
+                if (item.contains("show")) {
+                    showObj = item.value("show").toObject();
+                } else if (item.value("type").toString() == "show") {
+                    showObj = item.value("show").toObject();
+                } else {
+                    showObj = item;
+                }
+
+                int traktId = showObj.value("ids").toObject().value("trakt").toInt();
+                if (traktId > 0) {
+                    ids.insert(traktId);
+                    pageAdded++;
                 }
             }
+
+            listTotalCount += pageAdded;
+
+            // If we received fewer items than the limit, we hit the final page
+            if (arr.size() < 250) {
+                break;
+            }
+
+            page++;
         }
-        qDebug() << "[DEBUG List Fetch] Slug:" << slug << "| Total items fetched:" << addedCount;
+
+        qDebug() << "[LIST FETCH]" << listKey << "(" << slug << ") -> Total shows across" << page << "page(s):" << listTotalCount;
     }
 
-    qDebug() << "[DEBUG List Fetch Total] Grand total unique IDs cached in inLists_:" << ids.size();
+    qDebug() << "[LIST FETCH COMPLETE] Total unique IDs cached in inLists_:" << ids.size();
+    qDebug() << "========================================================";
+
     return ids;
 }
 

@@ -20,14 +20,15 @@ MainWindow::MainWindow(QWidget* parent)
     
     titleLabel_ = new QLabel;
     titleLabel_->setWordWrap(true);
-    titleLabel_->setStyleSheet("font-size: 20px; font-weight: bold;");
+    titleLabel_->setStyleSheet("font-size: 22px; font-weight: bold; margin-bottom: 4px;");
     
     runtimeLabel_ = new QLabel;
-    
+    runtimeLabel_->setStyleSheet("font-size: 14px; color: #a0a0a0;");
+
     overviewLabel_ = new QLabel;
     overviewLabel_->setWordWrap(true);
+    overviewLabel_->setStyleSheet("font-size: 13px; margin-top: 6px; margin-bottom: 6px;");
     
-    // NEW LABELS
     genreLabel_ = new QLabel;
     firstAiredLabel_ = new QLabel;
     seasonCountLabel_ = new QLabel;
@@ -46,27 +47,32 @@ MainWindow::MainWindow(QWidget* parent)
     connect(btnSitcom_, &QPushButton::clicked, this, &MainWindow::addToListSitcom);
     connect(btnSkip_, &QPushButton::clicked, this, &MainWindow::skipShow);
 
-    auto layout = new QVBoxLayout;
-    layout->addWidget(posterLabel_);
-    layout->addWidget(titleLabel_);
-    layout->addWidget(runtimeLabel_);
-    layout->addWidget(overviewLabel_);
+    // Right side vertical layout (Details + Buttons)
+    auto detailsLayout = new QVBoxLayout;
+    detailsLayout->addWidget(titleLabel_);
+    detailsLayout->addWidget(runtimeLabel_);
+    detailsLayout->addWidget(overviewLabel_);
+    detailsLayout->addWidget(genreLabel_);
+    detailsLayout->addWidget(firstAiredLabel_);
+    detailsLayout->addWidget(seasonCountLabel_);
+    detailsLayout->addSpacing(10);
+    detailsLayout->addWidget(btn30_);
+    detailsLayout->addWidget(btn40_);
+    detailsLayout->addWidget(btn60_);
+    detailsLayout->addWidget(btnSleepy_);
+    detailsLayout->addWidget(btnSitcom_);
+    detailsLayout->addSpacing(5);
+    detailsLayout->addWidget(btnSkip_);
+    detailsLayout->addStretch(); // Push content up neatly
 
-    // NEW
-    layout->addWidget(genreLabel_);
-    layout->addWidget(firstAiredLabel_);
-    layout->addWidget(seasonCountLabel_);
-
-    layout->addWidget(btn30_);
-    layout->addWidget(btn40_);
-    layout->addWidget(btn60_);
-    layout->addWidget(btnSleepy_);
-    layout->addWidget(btnSitcom_);
-    layout->addWidget(btnSkip_);
-
+    // Main horizontal layout (Left: Poster, Right: Details)
+    auto mainLayout = new QHBoxLayout;
+    mainLayout->addWidget(posterLabel_, 0, Qt::AlignTop);
+    mainLayout->addSpacing(15);
+    mainLayout->addLayout(detailsLayout);
 
     auto central = new QWidget;
-    central->setLayout(layout);
+    central->setLayout(mainLayout);
     setCentralWidget(central);
 
     setWindowTitle("Trakt Recommender");
