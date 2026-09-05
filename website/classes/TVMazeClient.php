@@ -82,8 +82,8 @@ class TVMazeClient
     public function fetchCandidateShows(): array
     {
         $shows = [];
-        // Fetch 2 pages of TVMaze index (e.g., page 0 and page 1) or randomly pick page
-        $pages = [0, 1, rand(2, 5)];
+        // Fetch pages of TVMaze index
+        $pages = [0, 1, rand(2, 6)];
         $pages = array_unique($pages);
 
         foreach ($pages as $p) {
@@ -100,42 +100,33 @@ class TVMazeClient
         return $shows;
     }
 
-    public function fetchRelatedShows(int $showId, array $seedShow = []): array
+    public function fetchShowsByGenre(string $genre): array
     {
         $results = [];
 
-        // 1. Search by seed show title directly
-        if (!empty($seedShow['title'])) {
-            $data = $this->get("/search/shows", ['q' => $seedShow['title']]);
-            if ($data && is_array($data)) {
-                foreach ($data as $item) {
-                    if (is_array($item)) {
-                        $parsed = $this->parseShow($item);
-                        if ($parsed['id'] > 0 && $parsed['id'] !== $showId) {
-                            $results[$parsed['id']] = $parsed;
-                        }
+        // 1. Search by genre name keyword
+        $data = $this->get("/search/shows", ['q' => $genre]);
+        if ($data && is_array($data)) {
+            foreach ($data as $item) {
+                if (is_array($item)) {
+                    $parsed = $this->parseShow($item);
+                    if ($parsed['id'] > 0 && in_array($genre, $parsed['genres'], true)) {
+                        $results[$parsed['id']] = $parsed;
                     }
                 }
             }
         }
 
-        // 2. Search by key title words to broaden related show search
-        if (!empty($seedShow['title'])) {
-            $cleanTitle = preg_replace('/[^a-zA-Z0-9\s]/', '', $seedShow['title']);
-            $words = array_filter(
-                explode(' ', (string)$cleanTitle),
-                fn($w) => strlen($w) > 3 && !in_array(strtolower($w), ['the', 'that', 'this', 'from', 'with', 'show'], true)
-            );
-
-            foreach ($words as $word) {
-                $data = $this->get("/search/shows", ['q' => $word]);
-                if ($data && is_array($data)) {
-                    foreach ($data as $item) {
-                        if (is_array($item)) {
-                            $parsed = $this->parseShow($item);
-                            if ($parsed['id'] > 0 && $parsed['id'] !== $showId) {
-                                $results[$parsed['id']] = $parsed;
-                            }
+        // 2. Fetch catalog index pages to find shows matching genre
+        $pages = [rand(0, 3), rand(4, 8), rand(9, 15)];
+        foreach ($pages as $p) {
+            $pageData = $this->get("/shows", ['page' => $p]);
+            if ($pageData && is_array($pageData)) {
+                foreach ($pageData as $item) {
+                    if (is_array($item)) {
+                        $parsed = $this->parseShow($item);
+                        if ($parsed['id'] > 0 && in_array($genre, $parsed['genres'], true)) {
+                            $results[$parsed['id']] = $parsed;
                         }
                     }
                 }

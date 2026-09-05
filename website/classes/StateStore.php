@@ -374,9 +374,9 @@ class StateStore
         return file_put_contents($this->getSkippedFile(), $line, FILE_APPEND | LOCK_EX) !== false;
     }
 
-    public function getCycleIndex(): int
+    public function getGenreIndex(): int
     {
-        $file = $this->dataDir . "cycle_index.txt";
+        $file = $this->dataDir . "genre_index.txt";
         if (!file_exists($file)) {
             return 0;
         }
@@ -384,9 +384,27 @@ class StateStore
         return is_numeric($val) ? (int)$val : 0;
     }
 
-    public function setCycleIndex(int $idx): void
+    public function setGenreIndex(int $idx): void
     {
-        $file = $this->dataDir . "cycle_index.txt";
+        $file = $this->dataDir . "genre_index.txt";
         file_put_contents($file, (string)$idx, LOCK_EX);
+    }
+
+    public function getActiveGenres(): array
+    {
+        $file = $this->dataDir . "active_genres.json";
+        if (!file_exists($file)) {
+            return [];
+        }
+        $content = file_get_contents($file);
+        $data = json_decode((string)$content, true);
+        return is_array($data) ? $data : [];
+    }
+
+    public function setActiveGenres(array $genres): void
+    {
+        $file = $this->dataDir . "active_genres.json";
+        $json = json_encode(array_values($genres), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        file_put_contents($file, $json, LOCK_EX);
     }
 }

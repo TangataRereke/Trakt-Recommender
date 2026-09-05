@@ -14,8 +14,14 @@ class ShowRecommender
     private array $inLists = [];
     private array $skipped = [];
 
-    private array $cycle = ['30', '40', '60', 'sleepy', 'sitcom'];
-    private int $cycleIndex = 0;
+    // All TVMaze genres EXCEPT Romance, Drama, Anime for round-robin rotation
+    private array $allRoundRobinGenres = [
+        "Action", "Adult", "Adventure", "Children", "Comedy", "Crime",
+        "DIY", "Espionage", "Family", "Fantasy", "Food", "History",
+        "Horror", "Legal", "Medical", "Music", "Mystery", "Nature",
+        "Science-Fiction", "Sports", "Supernatural", "Thriller", "Travel",
+        "War", "Western"
+    ];
 
     public function __construct(TVMazeClient $client, StateStore $state)
     {
@@ -80,44 +86,69 @@ class ShowRecommender
         return true;
     }
 
-    private function findRelatedShow(): ?array
+    /**
+     * Tries to find an eligible show for the current genre in round-robin rotation.
+     * Removes active genres that have no shows left from rotation.
+     */
+    private function findShowByGenreRoundRobin(): ?array
     {
-        $cycleCount = count($this->cycle);
-        $this->cycleIndex = $this->state->getCycleIndex() % $cycleCount;
+        $activeGenres = $this->state->getActiveGenres();
+        if (empty($activeGenres)) {
+            // Re-initialize from defaults if empty
+            $activeGenres = $this->allRoundRobinGenres;
+            $this->state->setActiveGenres($activeGenres);
+        }
 
-        for ($attempt = 0; $attempt < $cycleCount; $attempt++) {
-            $key = $this->cycle[$this->cycleIndex];
-            $nextCycleIndex = ($this->cycleIndex + 1) % $cycleCount;
+        $genreIndex = $this->state->getGenreIndex();
+        $maxAttempts = count($activeGenres);
+        $attempts = 0;
 
-            $listShows = $this->state->getShowsInList($key);
-            if (empty($listShows)) {
-                $this->cycleIndex = $nextCycleIndex;
-                continue;
+        while (!empty($activeGenres) && $attempts < $maxAttempts) {
+            $genreIndex = $genreIndex % count($activeGenres);
+            $currentGenre = $activeGenres[$genreIndex];
+
+            // Search candidate pool first for a show matching currentGenre
+            $foundCandidate = null;
+            foreach ($this->candidates as $s) {
+                if ($this->isEligible($s) && in_array($currentGenre, $s['genres'] ?? [], true)) {
+                    $foundCandidate = $s;
+                    break;
+                }
             }
 
-            // Shuffle list shows to vary seed show pick
-            shuffle($listShows);
-            foreach ($listShows as $seedShow) {
-                $seedId = (int)($seedShow['id'] ?? 0);
-                if ($seedId <= 0) continue;
-
-                $relatedShows = $this->client->fetchRelatedShows($seedId, $seedShow);
-                shuffle($relatedShows);
-
-                foreach ($relatedShows as $s) {
-                    if ($this->isEligible($s)) {
-                        $this->client->populateShowDetails($s);
-                        $this->cycleIndex = $nextCycleIndex;
-                        $this->state->setCycleIndex($this->cycleIndex);
-                        return $s;
+            // If not in candidate pool, search TVMaze specifically for currentGenre
+            if ($foundCandidate === null) {
+                $genreShows = $this->client->fetchShowsByGenre($currentGenre);
+                shuffle($genreShows);
+                foreach ($genreShows as $s) {
+                    if ($this->isEligible($s) && in_array($currentGenre, $s['genres'] ?? [], true)) {
+                        $foundCandidate = $s;
+                        break;
                     }
                 }
             }
 
-            $this->cycleIndex = $nextCycleIndex;
+            if ($foundCandidate !== null) {
+                // Advance genre index for next request
+                $nextGenreIndex = ($genreIndex + 1) % count($activeGenres);
+                $this->state->setGenreIndex($nextGenreIndex);
+
+                $this->client->populateShowDetails($foundCandidate);
+                return $foundCandidate;
+            } else {
+                // No shows left for this genre! Remove genre from active genres
+                array_splice($activeGenres, $genreIndex, 1);
+                $this->state->setActiveGenres($activeGenres);
+
+                if (empty($activeGenres)) {
+                    $this->state->setGenreIndex(0);
+                    break;
+                }
+                // Do not increment $genreIndex since array shifted, but increment attempt count
+                $attempts++;
+            }
         }
 
-        $this->state->setCycleIndex($this->cycleIndex);
         return null;
     }
 
@@ -125,13 +156,13 @@ class ShowRecommender
     {
         $this->ensureLoaded();
 
-        // 1. Try finding a show related to items in user's lists first
-        $related = $this->findRelatedShow();
-        if ($related !== null) {
-            return $related;
+        // 1. Try round-robin by genre
+        $genreShow = $this->findShowByGenreRoundRobin();
+        if ($genreShow !== null) {
+            return $genreShow;
         }
 
-        // 2. Fall back to candidates pool
+        // 2. Fall back to general candidates pool if all active genres exhausted
         $total = count($this->candidates);
         while ($this->index < $total) {
             $s = $this->candidates[$this->index];
@@ -143,11 +174,11 @@ class ShowRecommender
             }
         }
 
-        // 3. Fallback if exhausted
+        // 3. Fallback if completely exhausted
         return [
             'id' => 0,
             'title' => 'No more recommendations',
-            'overview' => 'All lists and candidates exhausted.',
+            'overview' => 'All genres and candidates exhausted.',
             'status' => 'Ended',
             'language' => 'English',
             'runtime' => 0,
