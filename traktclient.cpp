@@ -60,11 +60,17 @@ QByteArray TraktClient::get(const QString& path, const QString& query) const
     req.setRawHeader("Authorization", ("Bearer " + accessToken_).toUtf8());
     req.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
 
-
     QNetworkReply* reply = mgr.get(req);
     QEventLoop loop;
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
     loop.exec();
+
+    int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+    if (statusCode == 401) {
+        qWarning("Trakt API 401 Unauthorized - Access token is likely expired.");
+    } else if (reply->error() != QNetworkReply::NoError) {
+        qWarning() << "Trakt API Error:" << reply->errorString() << "Status:" << statusCode;
+    }
 
     QByteArray data = reply->readAll();
     reply->deleteLater();
