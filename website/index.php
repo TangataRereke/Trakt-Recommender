@@ -14,6 +14,7 @@
         </div>
         <nav class="nav-tabs">
             <button class="nav-btn active" data-tab="recommendations">Recommender</button>
+            <button class="nav-btn" data-tab="watch-next">Watch Next</button>
             <button class="nav-btn" data-tab="list-30">30 Min</button>
             <button class="nav-btn" data-tab="list-40">40 Min</button>
             <button class="nav-btn" data-tab="list-60">60 Min</button>
@@ -102,6 +103,15 @@
             </div>
             <div id="grid-sitcom" class="shows-grid"></div>
         </section>
+
+        <!-- TAB: WATCH NEXT -->
+        <section id="tab-watch-next" class="tab-content">
+            <div class="list-header">
+                <h2>Watch Next Shows</h2>
+                <span id="count-watch-next" class="count-badge">0 shows</span>
+            </div>
+            <div id="grid-watch-next" class="shows-grid"></div>
+        </section>
     </main>
 
     <script>
@@ -114,12 +124,17 @@
                 document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
 
                 btn.classList.add('active');
-                const tabId = 'tab-' + btn.getAttribute('data-tab');
+                const tabKey = btn.getAttribute('data-tab');
+                const tabId = 'tab-' + tabKey;
                 document.getElementById(tabId).classList.add('active');
 
-                const key = btn.getAttribute('data-tab').replace('list-', '');
-                if (['30', '40', '60', 'sleepy', 'sitcom'].includes(key)) {
-                    loadListShows(key);
+                if (tabKey === 'watch-next') {
+                    loadWatchNextShows();
+                } else {
+                    const key = tabKey.replace('list-', '');
+                    if (['30', '40', '60', 'sleepy', 'sitcom'].includes(key)) {
+                        loadListShows(key);
+                    }
                 }
             });
         });
@@ -245,7 +260,8 @@
                 const data = await res.json();
                 if (data.success && Array.isArray(data.shows)) {
                     countBadge.textContent = `${data.shows.length} show${data.shows.length === 1 ? '' : 's'}`;
-                    renderListGrid(grid, data.shows, listKey);
+                    const watchNextIds = data.watch_next_ids || [];
+                    renderListGrid(grid, data.shows, listKey, watchNextIds);
                 } else {
                     grid.innerHTML = '<p class="empty-state">No shows in this list yet.</p>';
                     countBadge.textContent = '0 shows';
@@ -255,13 +271,16 @@
             }
         }
 
-        function renderListGrid(container, shows, listKey) {
+        function renderListGrid(container, shows, listKey, watchNextIds = []) {
             if (shows.length === 0) {
                 container.innerHTML = '<p class="empty-state">No shows added to this list yet.</p>';
                 return;
             }
 
-            container.innerHTML = shows.map(s => `
+            container.innerHTML = shows.map(s => {
+                const isWatchNext = watchNextIds.includes(Number(s.id));
+                const jsonShowStr = escapeHtml(JSON.stringify(s));
+                return `
                 <div class="show-card">
                     <div class="card-poster">
                         ${s.posterUrl ? `<img src="${s.posterUrl}" alt="${escapeHtml(s.title)}">` : '<div class="poster-placeholder">No Image</div>'}
@@ -275,10 +294,90 @@
                         <p class="card-episodes">Seasons: ${s.seasonCount || '?'} | Episodes: ${s.totalEpisodes || '?'}</p>
                         <p class="card-genres">${s.genres ? escapeHtml(s.genres.join(', ')) : ''}</p>
                         <p class="card-overview">${escapeHtml(s.overview || '')}</p>
+                        <button class="btn btn-watch-next ${isWatchNext ? 'active' : ''}" data-show="${jsonShowStr}" onclick="handleToggleWatchNext(this)">
+                            ${isWatchNext ? '★ Watch Next' : '☆ Watch Next'}
+                        </button>
                         <button class="btn btn-remove" onclick="removeShowFromList('${listKey}', ${s.id})">Remove</button>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
+        }
+
+        async function handleToggleWatchNext(btn) {
+            try {
+                const show = JSON.parse(btn.getAttribute('data-show'));
+                const res = await fetch('api.php?action=toggle_watch_next', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ show: show })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (data.is_watch_next) {
+                        btn.classList.add('active');
+                        btn.innerHTML = '★ Watch Next';
+                    } else {
+                        btn.classList.remove('active');
+                        btn.innerHTML = '☆ Watch Next';
+                    }
+                } else {
+                    alert('Error updating Watch Next state.');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function loadWatchNextShows() {
+            const grid = document.getElementById('grid-watch-next');
+            const countBadge = document.getElementById('count-watch-next');
+            grid.innerHTML = '<p class="loading-text">Loading Watch Next shows...</p>';
+
+            try {
+                const res = await fetch('api.php?action=get_watch_next');
+                const data = await res.json();
+                if (data.success && Array.isArray(data.shows)) {
+                    countBadge.textContent = `${data.shows.length} show${data.shows.length === 1 ? '' : 's'}`;
+                    renderWatchNextGrid(grid, data.shows);
+                } else {
+                    grid.innerHTML = '<p class="empty-state">No shows marked as Watch Next yet.</p>';
+                    countBadge.textContent = '0 shows';
+                }
+            } catch (err) {
+                grid.innerHTML = `<p class="error-text">Error loading Watch Next page: ${err.message}</p>`;
+            }
+        }
+
+        function renderWatchNextGrid(container, shows) {
+            if (shows.length === 0) {
+                container.innerHTML = '<p class="empty-state">No shows marked as Watch Next yet.</p>';
+                return;
+            }
+
+            container.innerHTML = shows.map(s => {
+                const jsonShowStr = escapeHtml(JSON.stringify(s));
+                return `
+                <div class="show-card">
+                    <div class="card-poster">
+                        ${s.posterUrl ? `<img src="${s.posterUrl}" alt="${escapeHtml(s.title)}">` : '<div class="poster-placeholder">No Image</div>'}
+                    </div>
+                    <div class="card-body">
+                        <h3 class="card-title">${escapeHtml(s.title)}</h3>
+                        <div class="card-meta">
+                            <span>⏱ ${s.runtime ? s.runtime + ' min' : 'N/A'}</span>
+                            <span>📅 ${s.firstAired ? s.firstAired.substring(0, 4) : 'N/A'}</span>
+                        </div>
+                        <p class="card-episodes">Seasons: ${s.seasonCount || '?'} | Episodes: ${s.totalEpisodes || '?'}</p>
+                        <p class="card-genres">${s.genres ? escapeHtml(s.genres.join(', ')) : ''}</p>
+                        <p class="card-overview">${escapeHtml(s.overview || '')}</p>
+                        <button class="btn btn-watch-next active" data-show="${jsonShowStr}" onclick="handleToggleWatchNext(this); loadWatchNextShows();">
+                            ★ Watch Next
+                        </button>
+                    </div>
+                </div>
+            `;
+            }).join('');
         }
 
         async function removeShowFromList(listKey, showId) {

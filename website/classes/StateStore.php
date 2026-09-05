@@ -100,6 +100,80 @@ class StateStore
         if (!file_exists($skippedFile)) {
             file_put_contents($skippedFile, "");
         }
+        $watchNextFile = $this->dataDir . "watch_next.txt";
+        if (!file_exists($watchNextFile)) {
+            file_put_contents($watchNextFile, "");
+        }
+    }
+
+    public function getWatchNextFile(): string
+    {
+        return $this->dataDir . "watch_next.txt";
+    }
+
+    public function getWatchNextShows(): array
+    {
+        $file = $this->getWatchNextFile();
+        if (!file_exists($file)) {
+            return [];
+        }
+
+        $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $shows = [];
+        if ($lines !== false) {
+            foreach ($lines as $line) {
+                $trimmed = trim($line);
+                if (empty($trimmed)) continue;
+                $data = json_decode($trimmed, true);
+                if (is_array($data) && isset($data['id'])) {
+                    $shows[] = $data;
+                }
+            }
+        }
+        return $shows;
+    }
+
+    public function isWatchNext(int $showId): bool
+    {
+        $shows = $this->getWatchNextShows();
+        foreach ($shows as $s) {
+            if ((int)($s['id'] ?? 0) === $showId) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function toggleWatchNext(array $show): bool
+    {
+        $showId = (int)($show['id'] ?? 0);
+        if ($showId <= 0) {
+            return false;
+        }
+
+        $shows = $this->getWatchNextShows();
+        $exists = false;
+        $newShows = [];
+
+        foreach ($shows as $s) {
+            if ((int)($s['id'] ?? 0) === $showId) {
+                $exists = true;
+                continue; // Remove it
+            }
+            $newShows[] = json_encode($s, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
+
+        if ($exists) {
+            // It was present, now removed
+            $content = !empty($newShows) ? implode(PHP_EOL, $newShows) . PHP_EOL : "";
+            file_put_contents($this->getWatchNextFile(), $content, LOCK_EX);
+            return false; // Now false (unselected)
+        } else {
+            // Not present, add it
+            $jsonLine = json_encode($show, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . PHP_EOL;
+            file_put_contents($this->getWatchNextFile(), $jsonLine, FILE_APPEND | LOCK_EX);
+            return true; // Now true (selected)
+        }
     }
 
     public function getListFile(string $key): string

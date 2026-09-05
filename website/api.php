@@ -55,7 +55,29 @@ switch ($action) {
             exit;
         }
         $shows = $state->getShowsInList($listKey);
-        echo json_encode(['success' => true, 'list_key' => $listKey, 'shows' => $shows], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $watchNextShows = $state->getWatchNextShows();
+        $watchNextIds = array_map(fn($s) => (int)($s['id'] ?? 0), $watchNextShows);
+        echo json_encode(['success' => true, 'list_key' => $listKey, 'shows' => $shows, 'watch_next_ids' => $watchNextIds], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        break;
+
+    case 'get_watch_next':
+        $shows = $state->getWatchNextShows();
+        $watchNextIds = array_map(fn($s) => (int)($s['id'] ?? 0), $shows);
+        echo json_encode(['success' => true, 'shows' => $shows, 'watch_next_ids' => $watchNextIds], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        break;
+
+    case 'toggle_watch_next':
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) $input = [];
+        $show = $input['show'] ?? null;
+
+        if (!$show || !isset($show['id'])) {
+            echo json_encode(['success' => false, 'error' => 'Invalid parameters']);
+            exit;
+        }
+
+        $isWatchNext = $state->toggleWatchNext($show);
+        echo json_encode(['success' => true, 'is_watch_next' => $isWatchNext, 'show_id' => (int)$show['id']]);
         break;
 
     case 'remove_from_list':
