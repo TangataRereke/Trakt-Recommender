@@ -5,6 +5,74 @@ class StateStore
     private string $dataDir;
     private array $lists = ['30', '40', '60', 'sleepy', 'sitcom'];
 
+    private array $defaultShows = [
+        'sitcom' => [
+            'id' => 4538,
+            'title' => 'Hazel',
+            'overview' => 'Based on the Saturday Evening Post cartoons, the series centered around Hazel Burke, a maid, who for the first four seasons worked for the Baxter family.',
+            'status' => 'Ended',
+            'language' => 'English',
+            'runtime' => 30,
+            'posterUrl' => 'https://static.tvmaze.com/uploads/images/original_untouched/20/52120.jpg',
+            'genres' => ['Comedy', 'Family'],
+            'firstAired' => '1961-09-28',
+            'seasonCount' => 5,
+            'totalEpisodes' => 154
+        ],
+        'sleepy' => [
+            'id' => 6620,
+            'title' => 'Tales of Tomorrow',
+            'overview' => 'In this anthology series, tales of horror and science fiction are filmed live and presented to the viewing audience.',
+            'status' => 'Ended',
+            'language' => 'English',
+            'runtime' => 30,
+            'posterUrl' => 'https://static.tvmaze.com/uploads/images/original_untouched/25/62665.jpg',
+            'genres' => ['Horror', 'Science-Fiction', 'Mystery'],
+            'firstAired' => '1951-08-03',
+            'seasonCount' => 2,
+            'totalEpisodes' => 85
+        ],
+        '40' => [
+            'id' => 42,
+            'title' => 'Sleepy Hollow',
+            'overview' => 'Sleepy Hollow is a thrilling mystery-adventure drama series spanning two and a half centuries, in which a resurrected Ichabod Crane faces off against resurrected threats.',
+            'status' => 'Ended',
+            'language' => 'English',
+            'runtime' => 60,
+            'posterUrl' => 'https://static.tvmaze.com/uploads/images/original_untouched/81/204166.jpg',
+            'genres' => ['Drama', 'Mystery', 'Supernatural'],
+            'firstAired' => '2013-09-16',
+            'seasonCount' => 4,
+            'totalEpisodes' => 62
+        ],
+        '60' => [
+            'id' => 8557,
+            'title' => 'Frontier',
+            'overview' => 'Set against the stunning, raw backdrop of 1700s Canada, Frontier is revolving around warring factions vying for control of the fur trade.',
+            'status' => 'Ended',
+            'language' => 'English',
+            'runtime' => 47,
+            'posterUrl' => 'https://static.tvmaze.com/uploads/images/original_untouched/173/434300.jpg',
+            'genres' => ['Drama', 'Action', 'Adventure'],
+            'firstAired' => '2016-11-06',
+            'seasonCount' => 3,
+            'totalEpisodes' => 18
+        ],
+        '30' => [
+            'id' => 2146,
+            'title' => 'The Lone Ranger',
+            'overview' => 'Who was that masked man? The Lone Ranger, of course - sole survivor of a group of ambushed Texas Rangers, who was nursed back to health by Tonto.',
+            'status' => 'Ended',
+            'language' => 'English',
+            'runtime' => 30,
+            'posterUrl' => 'https://static.tvmaze.com/uploads/images/original_untouched/12/30000.jpg',
+            'genres' => ['Action', 'Adventure', 'Western'],
+            'firstAired' => '1949-09-15',
+            'seasonCount' => 5,
+            'totalEpisodes' => 221
+        ]
+    ];
+
     public function __construct(?string $dataDir = null)
     {
         $this->dataDir = $dataDir ?? __DIR__ . '/../data/';
@@ -18,8 +86,13 @@ class StateStore
     {
         foreach ($this->lists as $key) {
             $file = $this->dataDir . "list_{$key}.txt";
-            if (!file_exists($file)) {
-                file_put_contents($file, "");
+            if (!file_exists($file) || filesize($file) === 0) {
+                if (isset($this->defaultShows[$key])) {
+                    $jsonLine = json_encode($this->defaultShows[$key], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . PHP_EOL;
+                    file_put_contents($file, $jsonLine);
+                } else {
+                    file_put_contents($file, "");
+                }
             }
         }
         $skippedFile = $this->dataDir . "skipped.txt";

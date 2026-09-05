@@ -39,18 +39,15 @@ class ShowRecommender
 
     private function ensureLoaded(): void
     {
-        if (!empty($this->candidates)) {
-            return;
-        }
-
         $this->inLists = $this->state->getAllListShowIds();
         $this->skipped = $this->state->getSkippedShowIds();
 
-        $fetched = $this->client->fetchCandidateShows();
-        shuffle($fetched);
-
-        $this->candidates = $fetched;
-        $this->index = 0;
+        if (empty($this->candidates)) {
+            $fetched = $this->client->fetchCandidateShows();
+            shuffle($fetched);
+            $this->candidates = $fetched;
+            $this->index = 0;
+        }
     }
 
     public function isEligible(array $show): bool
@@ -81,7 +78,7 @@ class ShowRecommender
         return true;
     }
 
-    private function fallbackRelated(): array
+    private function findRelatedShow(): ?array
     {
         $cycleCount = count($this->cycle);
 
@@ -94,43 +91,38 @@ class ShowRecommender
                 continue;
             }
 
-            $randomIndex = array_rand($listShows);
-            $seedShow = $listShows[$randomIndex];
-            $seedId = (int)($seedShow['id'] ?? 0);
+            // Shuffle list shows to vary seed show pick
+            shuffle($listShows);
+            foreach ($listShows as $seedShow) {
+                $seedId = (int)($seedShow['id'] ?? 0);
+                if ($seedId <= 0) continue;
 
-            if ($seedId <= 0) {
-                continue;
-            }
+                $relatedShows = $this->client->fetchRelatedShows($seedId, $seedShow);
+                shuffle($relatedShows);
 
-            $relatedShows = $this->client->fetchRelatedShows($seedId, $seedShow);
-
-            foreach ($relatedShows as $s) {
-                if ($this->isEligible($s)) {
-                    $this->client->populateShowDetails($s);
-                    return $s;
+                foreach ($relatedShows as $s) {
+                    if ($this->isEligible($s)) {
+                        $this->client->populateShowDetails($s);
+                        return $s;
+                    }
                 }
             }
         }
 
-        return [
-            'id' => 0,
-            'title' => 'No more recommendations',
-            'overview' => 'All lists exhausted.',
-            'status' => 'Ended',
-            'language' => 'English',
-            'runtime' => 0,
-            'posterUrl' => '',
-            'genres' => [],
-            'firstAired' => '',
-            'seasonCount' => 0,
-            'totalEpisodes' => 0
-        ];
+        return null;
     }
 
     public function nextShow(): array
     {
         $this->ensureLoaded();
 
+        // 1. Try finding a show related to items in user's lists first
+        $related = $this->findRelatedShow();
+        if ($related !== null) {
+            return $related;
+        }
+
+        // 2. Fall back to candidates pool
         $total = count($this->candidates);
         while ($this->index < $total) {
             $s = $this->candidates[$this->index];
@@ -142,6 +134,19 @@ class ShowRecommender
             }
         }
 
-        return $this->fallbackRelated();
+        // 3. Fallback if exhausted
+        return [
+            'id' => 0,
+            'title' => 'No more recommendations',
+            'overview' => 'All lists and candidates exhausted.',
+            'status' => 'Ended',
+            'language' => 'English',
+            'runtime' => 0,
+            'posterUrl' => '',
+            'genres' => [],
+            'firstAired' => '',
+            'seasonCount' => 0,
+            'totalEpisodes' => 0
+        ];
     }
 }
