@@ -235,7 +235,7 @@
                 const res = await fetch('api.php?action=skip', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ show_id: currentShow.id })
+                    body: JSON.stringify({ show: currentShow, show_id: currentShow.id })
                 });
                 const data = await res.json();
                 if (data.success) {

@@ -222,6 +222,20 @@ class StateStore
         return array_keys($ids);
     }
 
+    public function getAllListShowTitles(): array
+    {
+        $titles = [];
+        foreach ($this->lists as $key) {
+            $shows = $this->getShowsInList($key);
+            foreach ($shows as $s) {
+                if (!empty($s['title'])) {
+                    $titles[strtolower(trim((string)$s['title']))] = true;
+                }
+            }
+        }
+        return array_keys($titles);
+    }
+
     public function isInLists(int $showId): bool
     {
         $allIds = $this->getAllListShowIds();
@@ -303,23 +317,60 @@ class StateStore
         return array_keys($ids);
     }
 
-    public function isSkipped(int $showId): bool
+    public function getSkippedShowTitles(): array
     {
-        $skippedIds = $this->getSkippedShowIds();
-        return in_array($showId, $skippedIds, true);
-    }
-
-    public function skipShow(int $showId): bool
-    {
-        if ($showId <= 0) {
-            return false;
+        $file = $this->getSkippedFile();
+        if (!file_exists($file)) {
+            return [];
         }
 
-        if ($this->isSkipped($showId)) {
+        $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $titles = [];
+        if ($lines !== false) {
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if (empty($line)) continue;
+                if (!is_numeric($line)) {
+                    $data = json_decode($line, true);
+                    if (is_array($data) && !empty($data['title'])) {
+                        $titles[strtolower(trim((string)$data['title']))] = true;
+                    }
+                }
+            }
+        }
+        return array_keys($titles);
+    }
+
+    public function isSkipped($show): bool
+    {
+        $showId = is_array($show) ? (int)($show['id'] ?? 0) : (int)$show;
+        $title = is_array($show) ? strtolower(trim((string)($show['title'] ?? ''))) : '';
+
+        if ($showId > 0 && in_array($showId, $this->getSkippedShowIds(), true)) {
+            return true;
+        }
+        if (!empty($title) && in_array($title, $this->getSkippedShowTitles(), true)) {
+            return true;
+        }
+        return false;
+    }
+
+    public function skipShow($show): bool
+    {
+        if ($this->isSkipped($show)) {
             return true;
         }
 
-        $line = (string)$showId . PHP_EOL;
+        if (is_array($show)) {
+            $showId = (int)($show['id'] ?? 0);
+            if ($showId <= 0) return false;
+            $line = json_encode($show, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . PHP_EOL;
+        } else {
+            $showId = (int)$show;
+            if ($showId <= 0) return false;
+            $line = (string)$showId . PHP_EOL;
+        }
+
         return file_put_contents($this->getSkippedFile(), $line, FILE_APPEND | LOCK_EX) !== false;
     }
 

@@ -12,7 +12,9 @@ class ShowRecommender
     private int $index = 0;
 
     private array $inLists = [];
+    private array $inListTitles = [];
     private array $skipped = [];
+    private array $skippedTitles = [];
 
     private array $cycle = ['30', '40', '60', 'sleepy', 'sitcom'];
     private int $cycleIndex = 0;
@@ -40,7 +42,9 @@ class ShowRecommender
     private function ensureLoaded(): void
     {
         $this->inLists = $this->state->getAllListShowIds();
+        $this->inListTitles = $this->state->getAllListShowTitles();
         $this->skipped = $this->state->getSkippedShowIds();
+        $this->skippedTitles = $this->state->getSkippedShowTitles();
 
         if (empty($this->candidates)) {
             $fetched = $this->client->fetchCandidateShows();
@@ -52,10 +56,14 @@ class ShowRecommender
 
     public function isEligible(array $show): bool
     {
+        $this->ensureLoaded();
+
         $id = (int)($show['id'] ?? 0);
         if ($id <= 0) {
             return false;
         }
+
+        $title = strtolower(trim((string)($show['title'] ?? '')));
 
         $status = strtolower(trim((string)($show['status'] ?? '')));
         if ($status !== 'ended') {
@@ -67,11 +75,11 @@ class ShowRecommender
             return false;
         }
 
-        if (in_array($id, $this->inLists, true)) {
+        if (in_array($id, $this->inLists, true) || (!empty($title) && in_array($title, $this->inListTitles, true))) {
             return false;
         }
 
-        if (in_array($id, $this->skipped, true)) {
+        if (in_array($id, $this->skipped, true) || (!empty($title) && in_array($title, $this->skippedTitles, true))) {
             return false;
         }
 

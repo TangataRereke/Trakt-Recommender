@@ -37,14 +37,15 @@ switch ($action) {
     case 'skip':
         $input = json_decode(file_get_contents('php://input'), true);
         if (!is_array($input)) $input = [];
-        $showId = (int)($input['show_id'] ?? $_POST['show_id'] ?? 0);
+        $show = $input['show'] ?? null;
+        $showId = (int)($show['id'] ?? $input['show_id'] ?? $_POST['show_id'] ?? 0);
 
         if ($showId <= 0) {
             echo json_encode(['success' => false, 'error' => 'Invalid show ID']);
             exit;
         }
 
-        $ok = $state->skipShow($showId);
+        $ok = $state->skipShow($show ?? $showId);
         echo json_encode(['success' => $ok, 'show_id' => $showId]);
         break;
 
