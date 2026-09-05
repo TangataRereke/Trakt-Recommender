@@ -21,6 +21,7 @@ switch ($action) {
 
     case 'add_to_list':
         $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) $input = [];
         $listKey = $input['list_key'] ?? $_POST['list_key'] ?? '';
         $show = $input['show'] ?? null;
 
@@ -35,6 +36,7 @@ switch ($action) {
 
     case 'skip':
         $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) $input = [];
         $showId = (int)($input['show_id'] ?? $_POST['show_id'] ?? 0);
 
         if ($showId <= 0) {
@@ -58,6 +60,7 @@ switch ($action) {
 
     case 'remove_from_list':
         $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) $input = [];
         $listKey = $input['list_key'] ?? $_POST['list_key'] ?? '';
         $showId = (int)($input['show_id'] ?? $_POST['show_id'] ?? 0);
 

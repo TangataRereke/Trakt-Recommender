@@ -81,13 +81,15 @@ class ShowRecommender
     private function findRelatedShow(): ?array
     {
         $cycleCount = count($this->cycle);
+        $this->cycleIndex = $this->state->getCycleIndex() % $cycleCount;
 
         for ($attempt = 0; $attempt < $cycleCount; $attempt++) {
             $key = $this->cycle[$this->cycleIndex];
-            $this->cycleIndex = ($this->cycleIndex + 1) % $cycleCount;
+            $nextCycleIndex = ($this->cycleIndex + 1) % $cycleCount;
 
             $listShows = $this->state->getShowsInList($key);
             if (empty($listShows)) {
+                $this->cycleIndex = $nextCycleIndex;
                 continue;
             }
 
@@ -103,12 +105,17 @@ class ShowRecommender
                 foreach ($relatedShows as $s) {
                     if ($this->isEligible($s)) {
                         $this->client->populateShowDetails($s);
+                        $this->cycleIndex = $nextCycleIndex;
+                        $this->state->setCycleIndex($this->cycleIndex);
                         return $s;
                     }
                 }
             }
+
+            $this->cycleIndex = $nextCycleIndex;
         }
 
+        $this->state->setCycleIndex($this->cycleIndex);
         return null;
     }
 

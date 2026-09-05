@@ -75,7 +75,8 @@ class StateStore
 
     public function __construct(?string $dataDir = null)
     {
-        $this->dataDir = $dataDir ?? __DIR__ . '/../data/';
+        $dir = $dataDir ?? __DIR__ . '/../data/';
+        $this->dataDir = rtrim($dir, '/\\') . '/';
         if (!is_dir($this->dataDir)) {
             mkdir($this->dataDir, 0777, true);
         }
@@ -246,5 +247,21 @@ class StateStore
 
         $line = (string)$showId . PHP_EOL;
         return file_put_contents($this->getSkippedFile(), $line, FILE_APPEND | LOCK_EX) !== false;
+    }
+
+    public function getCycleIndex(): int
+    {
+        $file = $this->dataDir . "cycle_index.txt";
+        if (!file_exists($file)) {
+            return 0;
+        }
+        $val = trim((string)file_get_contents($file));
+        return is_numeric($val) ? (int)$val : 0;
+    }
+
+    public function setCycleIndex(int $idx): void
+    {
+        $file = $this->dataDir . "cycle_index.txt";
+        file_put_contents($file, (string)$idx, LOCK_EX);
     }
 }

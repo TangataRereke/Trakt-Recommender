@@ -104,26 +104,8 @@ class TVMazeClient
     {
         $results = [];
 
-        // 1. Search by seed show's main genre if available
-        $genres = $seedShow['genres'] ?? [];
-        if (!empty($genres)) {
-            foreach ($genres as $genre) {
-                $data = $this->get("/search/shows", ['q' => $genre]);
-                if ($data && is_array($data)) {
-                    foreach ($data as $item) {
-                        if (is_array($item)) {
-                            $parsed = $this->parseShow($item);
-                            if ($parsed['id'] > 0 && $parsed['id'] !== $showId) {
-                                $results[$parsed['id']] = $parsed;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 2. If seed show has title words, search by title words
-        if (empty($results) && !empty($seedShow['title'])) {
+        // 1. Search by seed show title directly
+        if (!empty($seedShow['title'])) {
             $data = $this->get("/search/shows", ['q' => $seedShow['title']]);
             if ($data && is_array($data)) {
                 foreach ($data as $item) {
@@ -131,6 +113,29 @@ class TVMazeClient
                         $parsed = $this->parseShow($item);
                         if ($parsed['id'] > 0 && $parsed['id'] !== $showId) {
                             $results[$parsed['id']] = $parsed;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Search by key title words to broaden related show search
+        if (!empty($seedShow['title'])) {
+            $cleanTitle = preg_replace('/[^a-zA-Z0-9\s]/', '', $seedShow['title']);
+            $words = array_filter(
+                explode(' ', (string)$cleanTitle),
+                fn($w) => strlen($w) > 3 && !in_array(strtolower($w), ['the', 'that', 'this', 'from', 'with', 'show'], true)
+            );
+
+            foreach ($words as $word) {
+                $data = $this->get("/search/shows", ['q' => $word]);
+                if ($data && is_array($data)) {
+                    foreach ($data as $item) {
+                        if (is_array($item)) {
+                            $parsed = $this->parseShow($item);
+                            if ($parsed['id'] > 0 && $parsed['id'] !== $showId) {
+                                $results[$parsed['id']] = $parsed;
+                            }
                         }
                     }
                 }
