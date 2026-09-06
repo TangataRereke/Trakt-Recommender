@@ -13,18 +13,15 @@
             <span class="logo-icon">📺</span> TV Show Recommender
         </div>
         <nav class="nav-tabs">
-            <button class="nav-btn active" data-tab="recommendations">Recommender</button>
+            <button class="nav-btn active" data-tab="recommendations">Recommendations</button>
             <button class="nav-btn" data-tab="watch-next">Watch Next</button>
-            <button class="nav-btn" data-tab="list-30">30 Min</button>
-            <button class="nav-btn" data-tab="list-40">40 Min</button>
-            <button class="nav-btn" data-tab="list-60">60 Min</button>
-            <button class="nav-btn" data-tab="list-sleepy">Sleepy</button>
-            <button class="nav-btn" data-tab="list-sitcom">Sitcom</button>
+            <button class="nav-btn" data-tab="view-shows">View Shows</button>
+            <button class="nav-btn" data-tab="find-next-show">Find Next Show</button>
         </nav>
     </header>
 
     <main class="container">
-        <!-- TAB: RECOMMENDATIONS -->
+        <!-- TAB 1: RECOMMENDATIONS -->
         <section id="tab-recommendations" class="tab-content active">
             <div id="recommender-card" class="card recommender-box">
                 <div id="loading-spinner" class="spinner-overlay" style="display: none;">
@@ -63,48 +60,7 @@
             </div>
         </section>
 
-        <!-- TABS: LISTS (30, 40, 60, Sleepy, Sitcom) -->
-        <section id="tab-list-30" class="tab-content">
-            <div class="list-header">
-                <h2>30-Minute Shows List</h2>
-                <span id="count-30" class="count-badge">0 shows</span>
-            </div>
-            <div id="grid-30" class="shows-grid"></div>
-        </section>
-
-        <section id="tab-list-40" class="tab-content">
-            <div class="list-header">
-                <h2>40-Minute Shows List</h2>
-                <span id="count-40" class="count-badge">0 shows</span>
-            </div>
-            <div id="grid-40" class="shows-grid"></div>
-        </section>
-
-        <section id="tab-list-60" class="tab-content">
-            <div class="list-header">
-                <h2>60-Minute Shows List</h2>
-                <span id="count-60" class="count-badge">0 shows</span>
-            </div>
-            <div id="grid-60" class="shows-grid"></div>
-        </section>
-
-        <section id="tab-list-sleepy" class="tab-content">
-            <div class="list-header">
-                <h2>Sleepy Shows List</h2>
-                <span id="count-sleepy" class="count-badge">0 shows</span>
-            </div>
-            <div id="grid-sleepy" class="shows-grid"></div>
-        </section>
-
-        <section id="tab-list-sitcom" class="tab-content">
-            <div class="list-header">
-                <h2>Sitcom Shows List</h2>
-                <span id="count-sitcom" class="count-badge">0 shows</span>
-            </div>
-            <div id="grid-sitcom" class="shows-grid"></div>
-        </section>
-
-        <!-- TAB: WATCH NEXT -->
+        <!-- TAB 2: WATCH NEXT -->
         <section id="tab-watch-next" class="tab-content">
             <div class="list-header">
                 <h2>Watch Next Shows</h2>
@@ -112,10 +68,83 @@
             </div>
             <div id="grid-watch-next" class="shows-grid"></div>
         </section>
+
+        <!-- TAB 3: VIEW SHOWS -->
+        <section id="tab-view-shows" class="tab-content">
+            <div class="list-selector-bar">
+                <label for="view-list-select" class="selector-label">Select List:</label>
+                <select id="view-list-select" class="custom-select" onchange="onViewListChange()">
+                    <option value="30">30-Minute Shows</option>
+                    <option value="40">40-Minute Shows</option>
+                    <option value="60">60-Minute Shows</option>
+                    <option value="sleepy">Sleepy Shows</option>
+                    <option value="sitcom">Sitcom Shows</option>
+                </select>
+                <span id="count-view-list" class="count-badge">0 shows</span>
+            </div>
+            <div id="grid-view-list" class="shows-grid"></div>
+        </section>
+
+        <!-- TAB 4: FIND NEXT SHOW -->
+        <section id="tab-find-next-show" class="tab-content">
+            <div class="list-selector-bar">
+                <label for="find-list-select" class="selector-label">Select List:</label>
+                <select id="find-list-select" class="custom-select" onchange="onFindListChange()">
+                    <option value="30">30-Minute Shows</option>
+                    <option value="40">40-Minute Shows</option>
+                    <option value="60">60-Minute Shows</option>
+                    <option value="sleepy">Sleepy Shows</option>
+                    <option value="sitcom">Sitcom Shows</option>
+                </select>
+                <span id="find-counter" class="count-badge">Show 0 of 0</span>
+            </div>
+
+            <div id="find-single-show-card" class="card single-show-box">
+                <div id="find-empty-message" class="empty-state" style="display: none;">
+                    No shows in this list. Select a different list or add shows from Recommendations!
+                </div>
+
+                <div id="find-show-content" class="single-show-layout" style="display: none;">
+                    <h2 id="find-show-title" class="find-title-top">Show Title</h2>
+
+                    <div class="find-media-details">
+                        <div class="find-poster-container">
+                            <img id="find-poster" src="" alt="Show Poster" class="poster-img">
+                            <div id="find-poster-placeholder" class="poster-placeholder">No Image</div>
+                        </div>
+
+                        <div class="find-details-container">
+                            <div class="meta-group">
+                                <p><strong>Runtime:</strong> <span id="find-runtime">--</span></p>
+                                <p><strong>First Aired:</strong> <span id="find-aired">--</span></p>
+                                <p><strong>Seasons / Episodes:</strong> <span id="find-episodes">--</span></p>
+                                <p><strong>Genres:</strong> <span id="find-genres">--</span></p>
+                            </div>
+
+                            <div class="full-synopsis-box">
+                                <h3>Full Synopsis</h3>
+                                <p id="find-synopsis" class="full-synopsis-text">Show overview text goes here...</p>
+                            </div>
+
+                            <div class="find-nav-buttons">
+                                <button id="btn-find-prev" class="btn btn-nav" onclick="navFindShow(-1)">◀ Previous</button>
+                                <button id="btn-find-watch-next" class="btn btn-watch-next" onclick="toggleFindWatchNext()">☆ Watch Next</button>
+                                <button id="btn-find-next" class="btn btn-nav" onclick="navFindShow(1)">Next ▶</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <script>
         let currentShow = null;
+
+        // "Find Next Show" state
+        let findListShows = [];
+        let findCurrentIndex = 0;
+        let findWatchNextIds = [];
 
         // Navigation tab switching
         document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -130,11 +159,10 @@
 
                 if (tabKey === 'watch-next') {
                     loadWatchNextShows();
-                } else {
-                    const key = tabKey.replace('list-', '');
-                    if (['30', '40', '60', 'sleepy', 'sitcom'].includes(key)) {
-                        loadListShows(key);
-                    }
+                } else if (tabKey === 'view-shows') {
+                    onViewListChange();
+                } else if (tabKey === 'find-next-show') {
+                    onFindListChange();
                 }
             });
         });
@@ -250,9 +278,11 @@
             }
         }
 
-        async function loadListShows(listKey) {
-            const grid = document.getElementById('grid-' + listKey);
-            const countBadge = document.getElementById('count-' + listKey);
+        /* VIEW SHOWS TAB */
+        async function onViewListChange() {
+            const listKey = document.getElementById('view-list-select').value;
+            const grid = document.getElementById('grid-view-list');
+            const countBadge = document.getElementById('count-view-list');
             grid.innerHTML = '<p class="loading-text">Loading shows...</p>';
 
             try {
@@ -302,6 +332,129 @@
                 </div>
             `;
             }).join('');
+        }
+
+        /* FIND NEXT SHOW TAB */
+        async function onFindListChange() {
+            const listKey = document.getElementById('find-list-select').value;
+            try {
+                const res = await fetch(`api.php?action=get_list&list_key=${listKey}`);
+                const data = await res.json();
+                if (data.success && Array.isArray(data.shows)) {
+                    findListShows = data.shows;
+                    findWatchNextIds = (data.watch_next_ids || []).map(Number);
+                } else {
+                    findListShows = [];
+                    findWatchNextIds = [];
+                }
+            } catch (err) {
+                console.error(err);
+                findListShows = [];
+                findWatchNextIds = [];
+            }
+            findCurrentIndex = 0;
+            renderFindShow();
+        }
+
+        function renderFindShow() {
+            const emptyMsg = document.getElementById('find-empty-message');
+            const showContent = document.getElementById('find-show-content');
+            const counter = document.getElementById('find-counter');
+
+            if (findListShows.length === 0) {
+                emptyMsg.style.display = 'block';
+                showContent.style.display = 'none';
+                counter.textContent = 'Show 0 of 0';
+                return;
+            }
+
+            emptyMsg.style.display = 'none';
+            showContent.style.display = 'block';
+
+            if (findCurrentIndex < 0) findCurrentIndex = 0;
+            if (findCurrentIndex >= findListShows.length) findCurrentIndex = findListShows.length - 1;
+
+            const show = findListShows[findCurrentIndex];
+            counter.textContent = `Show ${findCurrentIndex + 1} of ${findListShows.length}`;
+
+            // Title at the top
+            document.getElementById('find-show-title').textContent = show.title || 'Untitled';
+
+            // Image
+            const posterImg = document.getElementById('find-poster');
+            const posterPlaceholder = document.getElementById('find-poster-placeholder');
+            if (show.posterUrl) {
+                posterImg.src = show.posterUrl;
+                posterImg.style.display = 'block';
+                posterPlaceholder.style.display = 'none';
+            } else {
+                posterImg.style.display = 'none';
+                posterPlaceholder.style.display = 'flex';
+            }
+
+            // Meta
+            document.getElementById('find-runtime').textContent = show.runtime ? `${show.runtime} min` : 'unknown';
+            document.getElementById('find-aired').textContent = show.firstAired || 'unknown';
+
+            let epText = 'unknown';
+            if (show.seasonCount > 0 || show.totalEpisodes > 0) {
+                epText = `Seasons: ${show.seasonCount || '?'} | Episodes: ${show.totalEpisodes || '?'}`;
+            }
+            document.getElementById('find-episodes').textContent = epText;
+
+            const genresText = (show.genres && show.genres.length > 0) ? show.genres.join(', ') : 'unknown';
+            document.getElementById('find-genres').textContent = genresText;
+
+            // Full Synopsis (Uncut)
+            document.getElementById('find-synopsis').textContent = show.overview || 'No synopsis available.';
+
+            // Nav & Watch Next buttons
+            const prevBtn = document.getElementById('btn-find-prev');
+            const nextBtn = document.getElementById('btn-find-next');
+            const watchNextBtn = document.getElementById('btn-find-watch-next');
+
+            prevBtn.disabled = (findCurrentIndex === 0);
+            nextBtn.disabled = (findCurrentIndex === findListShows.length - 1);
+
+            const isWatchNext = findWatchNextIds.includes(Number(show.id));
+            if (isWatchNext) {
+                watchNextBtn.classList.add('active');
+                watchNextBtn.innerHTML = '★ Watch Next';
+            } else {
+                watchNextBtn.classList.remove('active');
+                watchNextBtn.innerHTML = '☆ Watch Next';
+            }
+        }
+
+        function navFindShow(delta) {
+            findCurrentIndex += delta;
+            renderFindShow();
+        }
+
+        async function toggleFindWatchNext() {
+            if (findListShows.length === 0) return;
+            const show = findListShows[findCurrentIndex];
+            try {
+                const res = await fetch('api.php?action=toggle_watch_next', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ show: show })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const idNum = Number(show.id);
+                    if (data.is_watch_next) {
+                        if (!findWatchNextIds.includes(idNum)) findWatchNextIds.push(idNum);
+                    } else {
+                        findWatchNextIds = findWatchNextIds.filter(id => id !== idNum);
+                    }
+                    renderFindShow();
+                } else {
+                    alert('Error toggling Watch Next.');
+                }
+            } catch (err) {
+                console.error(err);
+            }
         }
 
         async function handleToggleWatchNext(btn) {
@@ -390,7 +543,7 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    loadListShows(listKey);
+                    onViewListChange();
                 } else {
                     alert('Error removing show.');
                 }
